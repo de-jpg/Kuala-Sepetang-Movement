@@ -57,7 +57,8 @@
 
   svg#overlay{ position:absolute; top:0; left:0; pointer-events:none; }
 
-  .flow{ fill:none; stroke-linecap:round; opacity:0.6; }
+  .flow{ fill:none; stroke-linecap:round; opacity:0.32; }
+  .flow-pulse{ fill:none; stroke-linecap:round; opacity:0.95; }
   .ring{ fill:none; stroke-linecap:round; }
 
   .node-label{
@@ -236,38 +237,60 @@
     return pts;
   }
 
+  // weight tiers -> size: busiest (3) biggest, moderate (2) noticeably
+  // smaller, quiet (1) smallest. Keeps a clear visual hierarchy instead of
+  // a flat linear bump.
+  function nodeRadius(weight){
+    if(weight>=3) return 11;
+    if(weight===2) return 7.5;
+    return 4.5;
+  }
+
   function drawCategory(g, colorVar, glowUrl, nodes){
     clearLayer(g);
     nodes.forEach(node=>{
       const originCount = 5 + node.weight*4;
       const origins = localOrigins(node, originCount);
+      const baseR = nodeRadius(node.weight);
 
       const glow = document.createElementNS(svgNS,'circle');
       glow.setAttribute('cx', node.x); glow.setAttribute('cy', node.y);
-      glow.setAttribute('r', 22 + node.weight*16);
+      glow.setAttribute('r', baseR*3.4);
       glow.setAttribute('fill', glowUrl);
       g.appendChild(glow);
 
       origins.forEach(o=>{
         const [ox,oy] = o;
-        const path = document.createElementNS(svgNS,'path');
-        path.setAttribute('d', curvedPath(ox,oy,node.x,node.y));
-        path.setAttribute('class','flow');
-        path.setAttribute('stroke', colorVar);
-        path.setAttribute('stroke-width', (0.6 + Math.random()*0.8).toFixed(2));
-        g.appendChild(path);
+        const d = curvedPath(ox,oy,node.x,node.y);
+
+        // solid base line, always fully drawn and dim
+        const base = document.createElementNS(svgNS,'path');
+        base.setAttribute('d', d);
+        base.setAttribute('class','flow');
+        base.setAttribute('stroke', colorVar);
+        base.setAttribute('stroke-width', (0.5 + Math.random()*0.5).toFixed(2));
+        g.appendChild(base);
+
+        // pulse: a short, thicker segment travelling along the same solid line
+        const pulse = document.createElementNS(svgNS,'path');
+        pulse.setAttribute('d', d);
+        pulse.setAttribute('class','flow-pulse');
+        pulse.setAttribute('stroke', colorVar);
+        pulse.setAttribute('stroke-width', (1.6 + Math.random()*1.2).toFixed(2));
+        g.appendChild(pulse);
+
         requestAnimationFrame(()=>{
-          const len = path.getTotalLength();
-          const dash = len*0.22;
-          path.setAttribute('stroke-dasharray', dash + ',' + (len-dash));
-          animatedLines.push({ el: path, len, speed: 18+Math.random()*22, phase: Math.random()*len });
+          const len = pulse.getTotalLength();
+          const dash = Math.max(14, len*0.08);
+          pulse.setAttribute('stroke-dasharray', dash + ',' + (len-dash));
+          animatedLines.push({ el: pulse, len, speed: 18+Math.random()*22, phase: Math.random()*len });
         });
       });
 
       for(let r=0;r<node.weight+1;r++){
         const ring = document.createElementNS(svgNS,'circle');
         ring.setAttribute('cx', node.x); ring.setAttribute('cy', node.y);
-        ring.setAttribute('r', 4 + r*6);
+        ring.setAttribute('r', baseR + r*(baseR*0.55));
         ring.setAttribute('class','ring');
         ring.setAttribute('stroke', colorVar);
         ring.setAttribute('stroke-width', 1);
@@ -277,14 +300,14 @@
 
       const dot = document.createElementNS(svgNS,'circle');
       dot.setAttribute('cx', node.x); dot.setAttribute('cy', node.y);
-      dot.setAttribute('r', 2.6);
+      dot.setAttribute('r', baseR*0.55);
       dot.setAttribute('fill', colorVar);
       dot.setAttribute('class','node-dot');
       g.appendChild(dot);
 
       const hit = document.createElementNS(svgNS,'circle');
       hit.setAttribute('cx', node.x); hit.setAttribute('cy', node.y);
-      hit.setAttribute('r', 12);
+      hit.setAttribute('r', baseR + 8);
       hit.setAttribute('fill','transparent');
       hit.setAttribute('class','node-hit');
       g.appendChild(hit);
