@@ -43,19 +43,21 @@
 
   #map-wrap{
     position:absolute; inset:0;
-    overflow:auto;
-    display:flex; align-items:flex-start; justify-content:center;
+    overflow:hidden;
+    display:flex; align-items:center; justify-content:center;
+    padding:18px;
   }
 
   #stage{ position:relative; }
 
   #basemap{
     display:block;
+    width:100%; height:100%;
     filter:invert(0.95) hue-rotate(180deg) brightness(0.82) contrast(1.15);
     opacity:0.9;
   }
 
-  svg#overlay{ position:absolute; top:0; left:0; pointer-events:none; }
+  svg#overlay{ position:absolute; top:0; left:0; width:100%; height:100%; pointer-events:none; }
 
   .flow{ fill:none; stroke-linecap:round; opacity:0.32; }
   .flow-pulse{ fill:none; stroke-linecap:round; opacity:0.95; }
@@ -123,7 +125,7 @@
   <main>
     <div id="map-wrap">
       <div id="stage">
-        <img id="basemap" src="map2.png" alt="Kuala Sepetang site plan">
+        <img id="basemap" src="map.png" alt="Kuala Sepetang site plan">
         <svg id="overlay">
           <defs>
             <radialGradient id="glow-religious" cx="50%" cy="50%" r="50%">
@@ -371,13 +373,34 @@
   });
 
   function sizeOverlay(){
-    svg.setAttribute('width', img.naturalWidth);
-    svg.setAttribute('height', img.naturalHeight);
     svg.setAttribute('viewBox', `0 0 ${img.naturalWidth} ${img.naturalHeight}`);
   }
 
+  const mapWrap = document.getElementById('map-wrap');
+  const stage = document.getElementById('stage');
+
+  // Sizes #stage (and therefore the image + svg, which fill it at 100%)
+  // to fit entirely within the visible map area, preserving the
+  // basemap's native aspect ratio — so a large source image never
+  // forces the page to scroll.
+  function fitStage(){
+    if(!img.naturalWidth || !img.naturalHeight) return;
+    const availW = mapWrap.clientWidth - 36; // account for padding
+    const availH = mapWrap.clientHeight - 36;
+    const scale = Math.min(availW / img.naturalWidth, availH / img.naturalHeight, 1);
+    stage.style.width = Math.round(img.naturalWidth * scale) + 'px';
+    stage.style.height = Math.round(img.naturalHeight * scale) + 'px';
+  }
+
+  let resizeTimer = null;
+  window.addEventListener('resize', ()=>{
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(fitStage, 100);
+  });
+
   function boot(){
     sizeOverlay();
+    fitStage();
     refreshInformal();
     renderAll();
     activeCats.add('religious'); activeCats.add('dining');
