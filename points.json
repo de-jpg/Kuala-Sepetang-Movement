@@ -1,0 +1,44 @@
+{
+  "religious": [
+    {"name":"Kuil Xianfa Shingong", "x":655, "y":50, "weight":3},
+    {"name":"Turtle Temple", "x":150, "y":320, "weight":2},
+    {"name":"Kuil Heng Thiam Seng Tee", "x":230, "y":470, "weight":2},
+    {"name":"Methodist Care Centre", "x":560, "y":470, "weight":1},
+    {"name":"Buddhist Association", "x":600, "y":520, "weight":2},
+    {"name":"Guanyin / Indian Temple", "x":680, "y":560, "weight":2},
+    {"name":"St. Peter's Chapel", "x":800, "y":300, "weight":2},
+    {"name":"Masjid Al-Hadhari", "x":900, "y":290, "weight":3},
+    {"name":"Masjid Al-Taufiqiah", "x":1080, "y":320, "weight":3}
+  ],
+  "dining": [
+    {"name":"Kedai Kopi Pakhong", "x":500, "y":430, "weight":2},
+    {"name":"Jit Jit Seng Kopitiam", "x":515, "y":450, "weight":2},
+    {"name":"Salleh Stall Mee Udang", "x":505, "y":460, "weight":2},
+    {"name":"Port Weld Restaurant", "x":480, "y":500, "weight":2},
+    {"name":"Kang Kao Seafood", "x":470, "y":520, "weight":2},
+    {"name":"Xin Seafood Restaurant", "x":460, "y":560, "weight":3},
+    {"name":"D'port Ikan Bakar", "x":520, "y":540, "weight":2},
+    {"name":"Rasa Sayang Seafood", "x":450, "y":600, "weight":2},
+    {"name":"Kheng Seafood Market", "x":440, "y":630, "weight":1},
+    {"name":"Mee Udang Warisan", "x":1000, "y":420, "weight":3},
+    {"name":"Restoran Mee Udang Mak Jah", "x":870, "y":300, "weight":3},
+    {"name":"Kak Nor Mee Udang", "x":1090, "y":300, "weight":2},
+    {"name":"Capitol Coffee Shop", "x":560, "y":400, "weight":1}
+  ],
+  "recreation": [
+    {"name":"Port Weld Basketball Court", "x":490, "y":410, "weight":3},
+    {"name":"Matang Mangrove Forest Park", "x":950, "y":60, "weight":2},
+    {"name":"Matang Mangrove Eco Park", "x":1050, "y":150, "weight":2},
+    {"name":"Eagle Feeding Spot", "x":350, "y":650, "weight":2},
+    {"name":"Eagle Sightseeing Tour", "x":370, "y":660, "weight":1},
+    {"name":"Port Weld Scenic Bridge", "x":400, "y":600, "weight":2},
+    {"name":"Kuala Sepetang Sunset View", "x":100, "y":500, "weight":2}
+  ],
+  "informal": [
+    {"name":"chairs outside a house", "x":300, "y":550, "weight":1},
+    {"name":"mamak table lingering late", "x":520, "y":480, "weight":2},
+    {"name":"chairs outside a house", "x":700, "y":600, "weight":1},
+    {"name":"chairs outside a house", "x":900, "y":500, "weight":1},
+    {"name":"mamak table lingering late", "x":600, "y":700, "weight":2}
+  ]
+}
