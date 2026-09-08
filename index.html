@@ -178,9 +178,9 @@
   const img = document.getElementById('basemap');
   const svg = document.getElementById('overlay');
 
-  // Fallback data, used only if points.json can't be fetched (e.g. this
+  // Fallback data, used only if points2.json can't be fetched (e.g. this
   // file was opened directly instead of served — GitHub Pages will fetch
-  // points.json fine). Edit points.json (or use editor.html) instead of
+  // points2.json fine). Edit points2.json (or use editor.html) instead of
   // editing this block.
   const fallbackData = {
     religious: [
@@ -201,7 +201,7 @@
     ]
   };
 
-  let seedData = null; // as loaded from points.json
+  let seedData = null; // as loaded from points2.json
   let informalNodes = [];
   const animatedLines = [];
 
@@ -408,7 +408,7 @@
     rafId = requestAnimationFrame(liveTick);
   }
 
-  fetch('points.json').then(r=>{ if(!r.ok) throw new Error(); return r.json(); })
+  fetch('points2.json').then(r=>{ if(!r.ok) throw new Error(); return r.json(); })
     .then(json=>{ seedData = json; })
     .catch(()=>{ seedData = fallbackData; })
     .finally(()=>{
