@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Editor — place gathering spots on the plan</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Fraunces:wght@500&family=Inter:wght@400;500&display=swap');
+  :root{
+    --ink:#0c0f10; --panel:#14181a; --line:#e7e2d3; --line-dim:rgba(231,226,211,0.16);
+    --muted:#8b9296;
+    --religious:#c9a03e; --dining:#d9663d; --recreation:#4f9d8a; --informal:#6f8fb0;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;height:100%;background:var(--ink);color:var(--line);font-family:'Inter',sans-serif;}
+  #app{display:flex;height:100vh;}
+  #canvas-wrap{flex:1 1 auto;overflow:auto;position:relative;background:#050607;}
+  #stage{position:relative;display:inline-block;}
+  #stage img{display:block;user-select:none;-webkit-user-drag:none;}
+  #pins{position:absolute;top:0;left:0;}
+  .pin{position:absolute;width:12px;height:12px;border-radius:50%;transform:translate(-50%,-50%);cursor:pointer;border:1.5px solid rgba(0,0,0,0.5);}
+  .pin[data-cat="religious"]{background:var(--religious);}
+  .pin[data-cat="dining"]{background:var(--dining);}
+  .pin[data-cat="recreation"]{background:var(--recreation);}
+  .pin[data-cat="informal"]{background:var(--informal);}
+  .pin-label{position:absolute;transform:translate(8px,-8px);font-size:11px;background:rgba(12,15,16,0.85);padding:2px 5px;border-radius:2px;white-space:nowrap;pointer-events:none;}
+
+  aside{
+    width:320px; flex:0 0 auto; background:var(--panel);
+    border-left:1px solid var(--line-dim);
+    display:flex; flex-direction:column;
+    padding:20px;
+    overflow-y:auto;
+  }
+  aside h1{font-family:'Fraunces',serif;font-weight:500;font-size:18px;margin:0 0 4px;}
+  aside p.sub{color:var(--muted);font-size:12px;line-height:1.5;margin:0 0 18px;}
+
+  .cat-row{display:flex;flex-direction:column;gap:6px;margin-bottom:16px;}
+  .cat-radio{
+    display:flex;align-items:center;gap:8px;
+    border:1px solid var(--line-dim);border-radius:3px;
+    padding:8px 10px;cursor:pointer;font-size:13px;color:var(--muted);
+  }
+  .cat-radio input{accent-color:var(--line);}
+  .cat-radio .swatch{width:9px;height:9px;border-radius:50%;}
+  .cat-radio[data-cat="religious"] .swatch{background:var(--religious);}
+  .cat-radio[data-cat="dining"] .swatch{background:var(--dining);}
+  .cat-radio[data-cat="recreation"] .swatch{background:var(--recreation);}
+  .cat-radio[data-cat="informal"] .swatch{background:var(--informal);}
+  .cat-radio.selected{border-color:var(--line);color:var(--line);}
+
+  .weight-row{display:flex;gap:6px;margin-bottom:18px;}
+  .weight-btn{flex:1;padding:7px 0;border:1px solid var(--line-dim);background:transparent;color:var(--muted);border-radius:3px;cursor:pointer;font-size:12px;}
+  .weight-btn.selected{border-color:var(--line);color:var(--line);}
+
+  .list-title{font-size:11px;color:var(--muted);margin:14px 0 6px;text-transform:none;border-top:1px solid var(--line-dim);padding-top:14px;}
+  .pin-row{display:flex;align-items:center;gap:6px;font-size:12px;padding:4px 0;border-bottom:1px solid rgba(255,255,255,0.04);}
+  .pin-row input[type=text]{flex:1;background:transparent;border:none;color:var(--line);font-size:12px;border-bottom:1px dotted transparent;}
+  .pin-row input[type=text]:focus{outline:none;border-bottom-color:var(--line-dim);}
+  .pin-row .del{cursor:pointer;color:var(--muted);}
+  .pin-row .del:hover{color:var(--line);}
+  .pin-row .dot{width:7px;height:7px;border-radius:50%;flex:0 0 auto;}
+
+  .actions{margin-top:auto;padding-top:16px;display:flex;flex-direction:column;gap:8px;border-top:1px solid var(--line-dim);}
+  .btn{appearance:none;border:1px solid var(--line-dim);background:transparent;color:var(--line);padding:9px 12px;border-radius:3px;cursor:pointer;font-size:13px;text-align:center;}
+  .btn:hover{border-color:var(--line);}
+  .btn.primary{background:var(--line);color:var(--ink);border-color:var(--line);}
+  #file-input{display:none;}
+  #status{font-size:11px;color:var(--muted);min-height:14px;}
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="canvas-wrap">
+    <div id="stage">
+      <img id="basemap" src="map.png" alt="site plan">
+      <div id="pins"></div>
+    </div>
+  </div>
+
+  <aside>
+    <h1>Place gathering spots</h1>
+    <p class="sub">Pick a category below, then click anywhere on the plan to drop a pin there. Click an existing pin to remove it. Everything exports to <code>points.json</code>, which the main map reads.</p>
+
+    <div class="cat-row" id="cat-row">
+      <label class="cat-radio selected" data-cat="religious"><input type="radio" name="cat" value="religious" checked><span class="swatch"></span>Worship</label>
+      <label class="cat-radio" data-cat="dining"><input type="radio" name="cat" value="dining"><span class="swatch"></span>Night dining</label>
+      <label class="cat-radio" data-cat="recreation"><input type="radio" name="cat" value="recreation"><span class="swatch"></span>Recreation</label>
+      <label class="cat-radio" data-cat="informal"><input type="radio" name="cat" value="informal"><span class="swatch"></span>Informal</label>
+    </div>
+
+    <div>
+      <p class="sub" style="margin-bottom:6px;">How busy is this spot?</p>
+      <div class="weight-row" id="weight-row">
+        <button class="weight-btn" data-w="1">Quiet</button>
+        <button class="weight-btn selected" data-w="2">Moderate</button>
+        <button class="weight-btn" data-w="3">Busy</button>
+      </div>
+    </div>
+
+    <div id="lists"></div>
+
+    <div class="actions">
+      <div id="status"></div>
+      <button class="btn" id="load-btn">Load existing points.json</button>
+      <input type="file" id="file-input" accept="application/json">
+      <button class="btn primary" id="export-btn">Export points.json</button>
+    </div>
+  </aside>
+</div>
+
+<script>
+(function(){
+  const cats = ['religious','dining','recreation','informal'];
+  let data = {religious:[], dining:[], recreation:[], informal:[]};
+  let selectedCat = 'religious';
+  let selectedWeight = 2;
+
+  const img = document.getElementById('basemap');
+  const pinsLayer = document.getElementById('pins');
+  const stage = document.getElementById('stage');
+  const status = document.getElementById('status');
+
+  // try to auto-load an existing points.json sitting next to this file
+  fetch('points.json').then(r=>{
+    if(!r.ok) throw new Error('none yet');
+    return r.json();
+  }).then(json=>{
+    cats.forEach(c=>{ if(Array.isArray(json[c])) data[c] = json[c]; });
+    status.textContent = 'loaded existing points.json';
+    renderPins(); renderLists();
+  }).catch(()=>{
+    status.textContent = 'starting fresh — no points.json found yet';
+  });
+
+  img.addEventListener('load', ()=>{
+    pinsLayer.style.width = img.naturalWidth + 'px';
+    pinsLayer.style.height = img.naturalHeight + 'px';
+  });
+
+  // category selection
+  document.querySelectorAll('.cat-radio').forEach(label=>{
+    label.addEventListener('click', ()=>{
+      document.querySelectorAll('.cat-radio').forEach(l=>l.classList.remove('selected'));
+      label.classList.add('selected');
+      selectedCat = label.dataset.cat;
+    });
+  });
+
+  document.querySelectorAll('.weight-btn').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      document.querySelectorAll('.weight-btn').forEach(b=>b.classList.remove('selected'));
+      btn.classList.add('selected');
+      selectedWeight = parseInt(btn.dataset.w,10);
+    });
+  });
+
+  // click on the image adds a pin
+  img.addEventListener('click', (e)=>{
+    const rect = img.getBoundingClientRect();
+    const scaleX = img.naturalWidth / rect.width;
+    const scaleY = img.naturalHeight / rect.height;
+    const x = Math.round((e.clientX - rect.left) * scaleX);
+    const y = Math.round((e.clientY - rect.top) * scaleY);
+    const name = prompt('Name this spot (e.g. "Xin Seafood Restaurant"):', '');
+    if(name === null) return;
+    data[selectedCat].push({name: name.trim() || 'Untitled spot', x, y, weight: selectedWeight});
+    renderPins(); renderLists();
+  });
+
+  function renderPins(){
+    pinsLayer.innerHTML = '';
+    cats.forEach(cat=>{
+      data[cat].forEach((p, i)=>{
+        const dot = document.createElement('div');
+        dot.className = 'pin';
+        dot.dataset.cat = cat;
+        dot.style.left = p.x + 'px';
+        dot.style.top = p.y + 'px';
+        dot.title = p.name + ' — click to remove';
+        dot.addEventListener('click', (e)=>{
+          e.stopPropagation();
+          data[cat].splice(i,1);
+          renderPins(); renderLists();
+        });
+        pinsLayer.appendChild(dot);
+
+        const label = document.createElement('div');
+        label.className = 'pin-label';
+        label.style.left = p.x + 'px';
+        label.style.top = p.y + 'px';
+        label.textContent = p.name;
+        pinsLayer.appendChild(label);
+      });
+    });
+  }
+
+  function renderLists(){
+    const listsEl = document.getElementById('lists');
+    listsEl.innerHTML = '';
+    const labels = {religious:'Worship', dining:'Night dining', recreation:'Recreation', informal:'Informal'};
+    cats.forEach(cat=>{
+      if(data[cat].length === 0) return;
+      const title = document.createElement('div');
+      title.className = 'list-title';
+      title.textContent = labels[cat] + ' (' + data[cat].length + ')';
+      listsEl.appendChild(title);
+      data[cat].forEach((p,i)=>{
+        const row = document.createElement('div');
+        row.className = 'pin-row';
+        const dot = document.createElement('span');
+        dot.className = 'dot';
+        dot.style.background = getComputedStyle(document.querySelector('.cat-radio[data-cat="'+cat+'"] .swatch')).backgroundColor;
+        row.appendChild(dot);
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.value = p.name;
+        input.addEventListener('change', ()=>{ p.name = input.value; renderPins(); });
+        row.appendChild(input);
+        const del = document.createElement('span');
+        del.className = 'del';
+        del.textContent = '✕';
+        del.addEventListener('click', ()=>{ data[cat].splice(i,1); renderPins(); renderLists(); });
+        row.appendChild(del);
+        listsEl.appendChild(row);
+      });
+    });
+  }
+
+  document.getElementById('export-btn').addEventListener('click', ()=>{
+    const blob = new Blob([JSON.stringify(data, null, 2)], {type:'application/json'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = 'points.json'; a.click();
+    status.textContent = 'exported — replace points.json in your repo with this file';
+  });
+
+  const fileInput = document.getElementById('file-input');
+  document.getElementById('load-btn').addEventListener('click', ()=> fileInput.click());
+  fileInput.addEventListener('change', (e)=>{
+    const file = e.target.files[0];
+    if(!file) return;
+    const reader = new FileReader();
+    reader.onload = ()=>{
+      try{
+        const json = JSON.parse(reader.result);
+        cats.forEach(c=>{ if(Array.isArray(json[c])) data[c] = json[c]; });
+        renderPins(); renderLists();
+        status.textContent = 'loaded ' + file.name;
+      }catch(err){
+        status.textContent = 'could not read that file as JSON';
+      }
+    };
+    reader.readAsText(file);
+  });
+
+})();
+</script>
+</body>
+</html>
