@@ -1,0 +1,693 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>十八丁 — Kuala Sepetang After Dark</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,500;9..144,600&family=Inter:wght@400;500&display=swap');
+
+  :root{
+    --ink:#0c0f10;
+    --panel:#14181a;
+    --line:#e7e2d3;
+    --line-dim:rgba(231,226,211,0.16);
+    --muted:#8b9296;
+    --religious:#c9a03e;
+    --dining:#d9663d;
+    --recreation:#4f9d8a;
+    --informal:#6f8fb0;
+  }
+
+  *{box-sizing:border-box;}
+  html,body{
+    margin:0; padding:0; height:100%;
+    background:var(--ink);
+    color:var(--line);
+    font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;
+    overflow:hidden;
+  }
+
+  #app{
+    position:relative;
+    width:100vw; height:100vh;
+    display:flex;
+    flex-direction:column;
+  }
+
+  header{
+    padding:22px 28px 14px;
+    flex:0 0 auto;
+    display:flex;
+    align-items:baseline;
+    justify-content:space-between;
+    gap:20px;
+    border-bottom:1px solid var(--line-dim);
+    z-index:5;
+  }
+
+  header h1{
+    font-family:'Fraunces',serif;
+    font-weight:500;
+    font-size:22px;
+    letter-spacing:0.01em;
+    margin:0;
+    color:var(--line);
+  }
+  header h1 span{
+    color:var(--muted);
+    font-weight:300;
+    font-style:italic;
+    font-size:16px;
+    margin-left:10px;
+  }
+
+  header p{
+    margin:0;
+    font-size:12.5px;
+    color:var(--muted);
+    max-width:340px;
+    line-height:1.5;
+    text-align:right;
+  }
+
+  main{
+    position:relative;
+    flex:1 1 auto;
+    min-height:0;
+  }
+
+  svg#map{
+    width:100%;
+    height:100%;
+    display:block;
+  }
+
+  .road{
+    fill:none;
+    stroke:var(--line-dim);
+    stroke-width:1.1;
+    stroke-linecap:round;
+    stroke-linejoin:round;
+  }
+
+  .flow{
+    fill:none;
+    stroke-linecap:round;
+    opacity:0.55;
+  }
+
+  .ring{
+    fill:none;
+    stroke-linecap:round;
+  }
+
+  .node-label{
+    font-family:'Inter',sans-serif;
+    font-size:9.5px;
+    fill:var(--muted);
+    opacity:0;
+    pointer-events:none;
+    transition:opacity .2s ease;
+  }
+
+  .node-dot{
+    cursor:pointer;
+  }
+  .node-dot:hover + .node-label,
+  .node-hit:hover ~ .node-label{
+    opacity:0.9;
+  }
+
+  .layer{
+    transition:opacity .5s ease;
+  }
+  .layer.off{
+    opacity:0;
+    pointer-events:none;
+  }
+
+  footer{
+    flex:0 0 auto;
+    padding:16px 24px 20px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:18px;
+    border-top:1px solid var(--line-dim);
+    z-index:5;
+    flex-wrap:wrap;
+  }
+
+  .cats{
+    display:flex;
+    gap:8px;
+    flex-wrap:wrap;
+  }
+
+  .cat-btn{
+    appearance:none;
+    border:1px solid var(--line-dim);
+    background:transparent;
+    color:var(--muted);
+    font-family:'Inter',sans-serif;
+    font-size:12.5px;
+    padding:8px 14px;
+    border-radius:3px;
+    cursor:pointer;
+    display:flex;
+    align-items:center;
+    gap:8px;
+    transition:border-color .2s ease, color .2s ease, background .2s ease;
+  }
+  .cat-btn .swatch{
+    width:8px; height:8px; border-radius:50%;
+    background:var(--muted);
+    flex:0 0 auto;
+  }
+  .cat-btn[data-cat="religious"] .swatch{ background:var(--religious); }
+  .cat-btn[data-cat="dining"] .swatch{ background:var(--dining); }
+  .cat-btn[data-cat="recreation"] .swatch{ background:var(--recreation); }
+  .cat-btn[data-cat="informal"] .swatch{ background:var(--informal); }
+
+  .cat-btn.active{
+    color:var(--line);
+    background:rgba(255,255,255,0.04);
+  }
+  .cat-btn[data-cat="religious"].active{ border-color:var(--religious); }
+  .cat-btn[data-cat="dining"].active{ border-color:var(--dining); }
+  .cat-btn[data-cat="recreation"].active{ border-color:var(--recreation); }
+  .cat-btn[data-cat="informal"].active{ border-color:var(--informal); }
+  .cat-btn[data-cat="all"].active{ border-color:var(--line); color:var(--line); }
+
+  .tools{
+    display:flex;
+    gap:8px;
+    align-items:center;
+  }
+
+  .tool-btn{
+    appearance:none;
+    border:1px solid var(--line-dim);
+    background:transparent;
+    color:var(--muted);
+    font-family:'Inter',sans-serif;
+    font-size:12px;
+    padding:8px 12px;
+    border-radius:3px;
+    cursor:pointer;
+    transition:border-color .2s ease, color .2s ease;
+  }
+  .tool-btn:hover{ color:var(--line); border-color:var(--line); }
+  .tool-btn:disabled{ opacity:0.4; cursor:default; }
+
+  #gif-status{
+    font-size:11px;
+    color:var(--muted);
+    min-width:120px;
+  }
+
+  .hint{
+    position:absolute;
+    left:28px;
+    bottom:78px;
+    font-size:11px;
+    color:var(--muted);
+    max-width:260px;
+    line-height:1.5;
+    z-index:4;
+    pointer-events:none;
+  }
+
+  @media (max-width:720px){
+    header{flex-direction:column; align-items:flex-start; gap:6px;}
+    header p{text-align:left;}
+    .hint{display:none;}
+  }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <header>
+    <h1>十八丁 <span>Kuala Sepetang, after dark</span></h1>
+    <p>Simulated foot traffic across a fishing town — where people worship, eat, play and simply stand around, drawn as flow onto the road network of Port Weld.</p>
+  </header>
+
+  <main>
+    <svg id="map" viewBox="0 0 1000 850" preserveAspectRatio="xMidYMid meet">
+      <defs>
+        <radialGradient id="glow-religious" cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stop-color="#c9a03e" stop-opacity="0.35"/>
+          <stop offset="100%" stop-color="#c9a03e" stop-opacity="0"/>
+        </radialGradient>
+        <radialGradient id="glow-dining" cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stop-color="#d9663d" stop-opacity="0.35"/>
+          <stop offset="100%" stop-color="#d9663d" stop-opacity="0"/>
+        </radialGradient>
+        <radialGradient id="glow-recreation" cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stop-color="#4f9d8a" stop-opacity="0.35"/>
+          <stop offset="100%" stop-color="#4f9d8a" stop-opacity="0"/>
+        </radialGradient>
+        <radialGradient id="glow-informal" cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stop-color="#6f8fb0" stop-opacity="0.35"/>
+          <stop offset="100%" stop-color="#6f8fb0" stop-opacity="0"/>
+        </radialGradient>
+      </defs>
+
+      <g id="roads"></g>
+      <g id="layer-religious" class="layer off" data-cat="religious"></g>
+      <g id="layer-dining" class="layer off" data-cat="dining"></g>
+      <g id="layer-recreation" class="layer off" data-cat="recreation"></g>
+      <g id="layer-informal" class="layer off" data-cat="informal"></g>
+    </svg>
+
+    <div class="hint">Click a category to bring its gathering points into the flow. Click "All" to see the whole town move at once.</div>
+  </main>
+
+  <footer>
+    <div class="cats">
+      <button class="cat-btn" data-cat="religious"><span class="swatch"></span>Worship</button>
+      <button class="cat-btn" data-cat="dining"><span class="swatch"></span>Night dining</button>
+      <button class="cat-btn" data-cat="recreation"><span class="swatch"></span>Recreation</button>
+      <button class="cat-btn" data-cat="informal"><span class="swatch"></span>Informal</button>
+      <button class="cat-btn" data-cat="all"><span class="swatch" style="background:var(--line)"></span>All together</button>
+    </div>
+    <div class="tools">
+      <span id="gif-status"></span>
+      <button class="tool-btn" id="shuffle-btn">Reshuffle informal spots</button>
+      <button class="tool-btn" id="gif-btn">Download loop as GIF</button>
+    </div>
+  </footer>
+
+</div>
+
+<script>
+(function(){
+
+  // ---------------------------------------------------------------
+  // 1. Road network — a simplified trace of the red road lines from
+  //    the Kuala Sepetang / Port Weld site plan. Two arms (the north
+  //    spit toward Kuil Xianfa Shingong, and the west spit toward the
+  //    Turtle Temple) feed into the town grid, which is crossed by
+  //    Matang Road running east.
+  // ---------------------------------------------------------------
+  const roadPolylines = [
+    [[560,40],[548,90],[532,150],[515,210],[498,270],[482,330],[472,380],[468,410]],
+    [[262,130],[268,180],[280,230],[298,280],[318,330],[340,375],[362,410],[382,435],[398,455]],
+    [[468,410],[440,430],[415,448],[398,455]],
+    [[398,455],[404,470],[412,485],[420,498]],
+    [[420,498],[424,520],[428,545],[432,570],[436,600],[440,630],[446,660],[452,690],[458,720]],
+    [[398,455],[460,462],[540,470],[620,478],[700,486],[780,494],[860,500],[940,506],[1000,510]],
+    [[420,498],[480,502],[560,508],[640,514],[720,520],[800,526],[880,532],[960,538]],
+    [[520,470],[522,540]],
+    [[580,476],[582,546]],
+    [[640,482],[642,552]],
+    [[700,488],[702,558]],
+    [[760,494],[762,564]],
+    [[458,720],[468,760],[480,800],[494,830]],
+    [[860,500],[862,600],[864,700]]
+  ];
+
+  // ---------------------------------------------------------------
+  // 2. Hotspots by category, positioned along that network from the
+  //    Google Maps screenshots (temples, mosques, seafood/mee udang
+  //    restaurants, the basketball court, the eco park, the eagle
+  //    feeding spot). "weight" scales the number of rings and the
+  //    number of people-lines drawn into it.
+  // ---------------------------------------------------------------
+  const categories = {
+    religious: {
+      color: 'var(--religious)', glow: 'url(#glow-religious)',
+      nodes: [
+        {name:'Kuil Xianfa Shingong', x:562, y:45, weight:3},
+        {name:'Turtle Temple', x:260, y:125, weight:2},
+        {name:'Kuil Heng Thiam Seng Tee', x:285, y:235, weight:2},
+        {name:'Methodist Care Centre', x:412, y:452, weight:1},
+        {name:'Buddhist Association', x:424, y:520, weight:2},
+        {name:'Guanyin / Indian Temple', x:480, y:502, weight:2},
+        {name:"St. Peter's Chapel", x:620, y:478, weight:2},
+        {name:'Masjid Al-Hadhari', x:700, y:486, weight:3},
+        {name:'Masjid Al-Taufiqiah', x:940, y:506, weight:3}
+      ]
+    },
+    dining: {
+      color: 'var(--dining)', glow: 'url(#glow-dining)',
+      nodes: [
+        {name:'Kedai Kopi Pakhong', x:390, y:452, weight:2},
+        {name:'Jit Jit Seng Kopitiam', x:405, y:460, weight:2},
+        {name:'Salleh Stall Mee Udang', x:412, y:468, weight:2},
+        {name:'Port Weld Restaurant', x:382, y:435, weight:2},
+        {name:'Kang Kao Seafood', x:390, y:440, weight:2},
+        {name:'Xin Seafood Restaurant', x:398, y:458, weight:3},
+        {name:"D'port Ikan Bakar", x:420, y:472, weight:2},
+        {name:'Rasa Sayang Seafood', x:405, y:478, weight:2},
+        {name:'Kheng Seafood Market', x:398, y:470, weight:1},
+        {name:'Mee Udang Warisan', x:800, y:526, weight:3},
+        {name:'Restoran Mee Udang Mak Jah', x:715, y:492, weight:3},
+        {name:'Kak Nor Mee Udang', x:990, y:510, weight:2},
+        {name:'Capitol Coffee Shop', x:460, y:462, weight:1}
+      ]
+    },
+    recreation: {
+      color: 'var(--recreation)', glow: 'url(#glow-recreation)',
+      nodes: [
+        {name:'Port Weld Basketball Court', x:395, y:448, weight:3},
+        {name:'Matang Mangrove Forest Park', x:860, y:60, weight:2},
+        {name:'Matang Mangrove Eco Park', x:900, y:300, weight:2},
+        {name:'Eagle Feeding Spot', x:330, y:440, weight:2},
+        {name:'Eagle Sightseeing Tour', x:345, y:450, weight:1},
+        {name:'Port Weld Scenic Bridge', x:398, y:440, weight:2},
+        {name:'Kuala Sepetang Sunset View', x:240, y:350, weight:2}
+      ]
+    }
+  };
+
+  const informalCount = 16;
+  let informalNodes = [];
+
+  // ---------------------------------------------------------------
+  // Geometry helpers
+  // ---------------------------------------------------------------
+  const svgNS = 'http://www.w3.org/2000/svg';
+
+  function flattenRoadPoints(){
+    const pts = [];
+    roadPolylines.forEach(line=>{
+      for(let i=0;i<line.length-1;i++){
+        const a=line[i], b=line[i+1];
+        const steps = 6;
+        for(let s=0;s<steps;s++){
+          const t = s/steps;
+          pts.push([ a[0]+(b[0]-a[0])*t, a[1]+(b[1]-a[1])*t ]);
+        }
+      }
+    });
+    return pts;
+  }
+  const roadPoints = flattenRoadPoints();
+
+  function randomRoadPoint(){
+    return roadPoints[Math.floor(Math.random()*roadPoints.length)];
+  }
+
+  function nearestRoadPoints(x,y,n){
+    return roadPoints
+      .map(p=>({p, d:(p[0]-x)**2+(p[1]-y)**2}))
+      .sort((a,b)=>a.d-b.d)
+      .slice(0, n*4)
+      .sort(()=>Math.random()-0.5)
+      .slice(0,n)
+      .map(o=>o.p);
+  }
+
+  function makeInformalNodes(){
+    const pts = [];
+    for(let i=0;i<informalCount;i++){
+      const [x,y] = randomRoadPoint();
+      const jx = x + (Math.random()-0.5)*36;
+      const jy = y + (Math.random()-0.5)*36;
+      const kind = Math.random() < 0.4 ? 'a mamak table lingering past midnight' : 'a few plastic chairs outside a house';
+      pts.push({name:kind, x:jx, y:jy, weight: Math.random()<0.3 ? 2 : 1});
+    }
+    return pts;
+  }
+  informalNodes = makeInformalNodes();
+
+  // ---------------------------------------------------------------
+  // Rendering
+  // ---------------------------------------------------------------
+  const roadsG = document.getElementById('roads');
+  roadPolylines.forEach(line=>{
+    const pathD = line.map((p,i)=> (i===0?'M':'L') + p[0] + ',' + p[1]).join(' ');
+    const path = document.createElementNS(svgNS,'path');
+    path.setAttribute('d', pathD);
+    path.setAttribute('class','road');
+    roadsG.appendChild(path);
+  });
+
+  const animatedLines = []; // {el, len, speed, phase}
+
+  function clearLayer(g){
+    while(g.firstChild) g.removeChild(g.firstChild);
+  }
+
+  function curvedPath(x1,y1,x2,y2){
+    const mx = (x1+x2)/2 + (Math.random()-0.5)*40;
+    const my = (y1+y2)/2 + (Math.random()-0.5)*40;
+    return `M${x1},${y1} Q${mx},${my} ${x2},${y2}`;
+  }
+
+  function drawCategory(g, colorVar, glowUrl, nodes){
+    clearLayer(g);
+    nodes.forEach(node=>{
+      const originCount = 5 + node.weight*4;
+      const origins = nearestRoadPoints(node.x, node.y, originCount);
+
+      // glow behind the node
+      const glow = document.createElementNS(svgNS,'circle');
+      glow.setAttribute('cx', node.x);
+      glow.setAttribute('cy', node.y);
+      glow.setAttribute('r', 20 + node.weight*14);
+      glow.setAttribute('fill', glowUrl);
+      g.appendChild(glow);
+
+      // flow lines converging on the node
+      origins.forEach((o,i)=>{
+        const [ox,oy] = o;
+        const path = document.createElementNS(svgNS,'path');
+        path.setAttribute('d', curvedPath(ox,oy,node.x,node.y));
+        path.setAttribute('class','flow');
+        path.setAttribute('stroke', colorVar);
+        path.setAttribute('stroke-width', (0.5 + Math.random()*0.7).toFixed(2));
+        g.appendChild(path);
+
+        requestAnimationFrame(()=>{
+          const len = path.getTotalLength();
+          const dash = len*0.22;
+          path.setAttribute('stroke-dasharray', dash + ',' + (len-dash));
+          animatedLines.push({
+            el: path,
+            len: len,
+            speed: 18 + Math.random()*22,
+            phase: Math.random()*len
+          });
+        });
+      });
+
+      // concentric rings, count driven by weight
+      for(let r=0;r<node.weight+1;r++){
+        const ring = document.createElementNS(svgNS,'circle');
+        ring.setAttribute('cx', node.x);
+        ring.setAttribute('cy', node.y);
+        ring.setAttribute('r', 3 + r*5);
+        ring.setAttribute('class','ring');
+        ring.setAttribute('stroke', colorVar);
+        ring.setAttribute('stroke-width', 0.8);
+        ring.setAttribute('opacity', (0.55 - r*0.12).toFixed(2));
+        g.appendChild(ring);
+      }
+
+      const dot = document.createElementNS(svgNS,'circle');
+      dot.setAttribute('cx', node.x);
+      dot.setAttribute('cy', node.y);
+      dot.setAttribute('r', 2.2);
+      dot.setAttribute('fill', colorVar);
+      dot.setAttribute('class','node-dot');
+      g.appendChild(dot);
+
+      const label = document.createElementNS(svgNS,'text');
+      label.setAttribute('x', node.x+7);
+      label.setAttribute('y', node.y-7);
+      label.setAttribute('class','node-label');
+      label.textContent = node.name;
+      g.appendChild(label);
+    });
+  }
+
+  function renderAll(){
+    animatedLines.length = 0;
+    drawCategory(document.getElementById('layer-religious'), 'var(--religious)', 'url(#glow-religious)', categories.religious.nodes);
+    drawCategory(document.getElementById('layer-dining'), 'var(--dining)', 'url(#glow-dining)', categories.dining.nodes);
+    drawCategory(document.getElementById('layer-recreation'), 'var(--recreation)', 'url(#glow-recreation)', categories.recreation.nodes);
+    drawCategory(document.getElementById('layer-informal'), 'var(--informal)', 'url(#glow-informal)', informalNodes);
+  }
+  renderAll();
+
+  // ---------------------------------------------------------------
+  // Animation loop — drives stroke-dashoffset directly so it can be
+  // paused and stepped deterministically for the GIF export below.
+  // ---------------------------------------------------------------
+  function applyAnimationAt(tSeconds){
+    animatedLines.forEach(line=>{
+      const offset = (line.phase - tSeconds*line.speed) % line.len;
+      line.el.setAttribute('stroke-dashoffset', offset);
+    });
+  }
+
+  let rafId = null;
+  let liveStart = performance.now();
+  function liveTick(now){
+    applyAnimationAt((now - liveStart)/1000);
+    rafId = requestAnimationFrame(liveTick);
+  }
+  rafId = requestAnimationFrame(liveTick);
+
+  // ---------------------------------------------------------------
+  // Category toggling
+  // ---------------------------------------------------------------
+  const layerIds = {religious:'layer-religious', dining:'layer-dining', recreation:'layer-recreation', informal:'layer-informal'};
+  const activeCats = new Set();
+  const buttons = Array.from(document.querySelectorAll('.cat-btn'));
+
+  function syncLayers(){
+    Object.keys(layerIds).forEach(cat=>{
+      const g = document.getElementById(layerIds[cat]);
+      g.classList.toggle('off', !activeCats.has(cat));
+    });
+    buttons.forEach(b=>{
+      const cat = b.dataset.cat;
+      if(cat==='all'){
+        b.classList.toggle('active', activeCats.size===4);
+      } else {
+        b.classList.toggle('active', activeCats.has(cat));
+      }
+    });
+  }
+
+  buttons.forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const cat = btn.dataset.cat;
+      if(cat==='all'){
+        if(activeCats.size===4){
+          activeCats.clear();
+        } else {
+          Object.keys(layerIds).forEach(c=>activeCats.add(c));
+        }
+      } else {
+        if(activeCats.has(cat)) activeCats.delete(cat);
+        else activeCats.add(cat);
+      }
+      syncLayers();
+    });
+  });
+
+  // start with worship + night dining visible, a reasonable first view
+  activeCats.add('religious');
+  activeCats.add('dining');
+  syncLayers();
+
+  // ---------------------------------------------------------------
+  // Reshuffle informal gathering spots
+  // ---------------------------------------------------------------
+  document.getElementById('shuffle-btn').addEventListener('click', ()=>{
+    informalNodes = makeInformalNodes();
+    renderAll();
+    syncLayers();
+  });
+
+  // ---------------------------------------------------------------
+  // GIF export — pauses the live loop, steps the same animation
+  // function frame by frame, rasterises the SVG to a canvas, and
+  // encodes it client-side with gif.js. Loads gif.js from a CDN,
+  // so this only works once the page is actually hosted online
+  // (e.g. on GitHub Pages) rather than opened offline.
+  // ---------------------------------------------------------------
+  const gifBtn = document.getElementById('gif-btn');
+  const gifStatus = document.getElementById('gif-status');
+  let gifLibLoading = null;
+
+  function loadGifLib(){
+    if(window.GIF) return Promise.resolve();
+    if(gifLibLoading) return gifLibLoading;
+    gifLibLoading = new Promise((resolve, reject)=>{
+      const s = document.createElement('script');
+      s.src = 'https://cdnjs.cloudflare.com/ajax/libs/gif.js/0.2.0/gif.js';
+      s.onload = resolve;
+      s.onerror = ()=>reject(new Error('gif.js failed to load — check your internet connection.'));
+      document.head.appendChild(s);
+    });
+    return gifLibLoading;
+  }
+
+  function svgToImage(svgEl, width, height){
+    return new Promise((resolve,reject)=>{
+      const clone = svgEl.cloneNode(true);
+      clone.setAttribute('width', width);
+      clone.setAttribute('height', height);
+      clone.setAttribute('xmlns', svgNS);
+      const bg = document.createElementNS(svgNS,'rect');
+      bg.setAttribute('x',0); bg.setAttribute('y',0);
+      bg.setAttribute('width','1000'); bg.setAttribute('height','850');
+      bg.setAttribute('fill','#0c0f10');
+      clone.insertBefore(bg, clone.firstChild);
+      const xml = new XMLSerializer().serializeToString(clone);
+      const svgBlob = new Blob([xml], {type:'image/svg+xml;charset=utf-8'});
+      const url = URL.createObjectURL(svgBlob);
+      const img = new Image();
+      img.onload = ()=>{ URL.revokeObjectURL(url); resolve(img); };
+      img.onerror = reject;
+      img.src = url;
+    });
+  }
+
+  gifBtn.addEventListener('click', async ()=>{
+    gifBtn.disabled = true;
+    gifStatus.textContent = 'loading encoder…';
+    try{
+      await loadGifLib();
+    }catch(e){
+      gifStatus.textContent = 'no internet — host on GitHub Pages first.';
+      gifBtn.disabled = false;
+      return;
+    }
+
+    cancelAnimationFrame(rafId);
+
+    const svgEl = document.getElementById('map');
+    const W = 700, H = 595;
+    const canvas = document.createElement('canvas');
+    canvas.width = W; canvas.height = H;
+    const ctx = canvas.getContext('2d');
+
+    const gif = new GIF({
+      workers: 2,
+      quality: 8,
+      width: W,
+      height: H,
+      workerScript: 'https://cdnjs.cloudflare.com/ajax/libs/gif.js/0.2.0/gif.worker.js'
+    });
+
+    const frameCount = 24;
+    const loopSeconds = 2.4;
+    const dt = loopSeconds/frameCount;
+
+    for(let i=0;i<frameCount;i++){
+      applyAnimationAt(i*dt);
+      gifStatus.textContent = `rendering frame ${i+1}/${frameCount}…`;
+      const img = await svgToImage(svgEl, W, H);
+      ctx.clearRect(0,0,W,H);
+      ctx.drawImage(img,0,0,W,H);
+      gif.addFrame(ctx, {copy:true, delay: dt*1000});
+    }
+
+    gif.on('finished', function(blob){
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'kuala-sepetang-gathering-flows.gif';
+      a.click();
+      gifStatus.textContent = 'done — check your downloads.';
+      gifBtn.disabled = false;
+      liveStart = performance.now();
+      rafId = requestAnimationFrame(liveTick);
+    });
+
+    gifStatus.textContent = 'encoding…';
+    gif.render();
+  });
+
+})();
+</script>
+</body>
+</html>
